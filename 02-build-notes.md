@@ -130,11 +130,21 @@ read is stripped.
 
 ## Verified in production
 
-- `/api/health` — model configured, audit log configured, `hybrid (bm25 + vector, RRF)`, 16 docs / 47 chunks, non-ephemeral signing key
-- Eiffel paragraph → UNRELIABLE, score 5, BLOCK/CRITICAL, 4 contradicted / 1 partial / 1 **not checkable** (the hedged Burj Khalifa clause)
-- `my name might be mark . tom and jerry is disny show` → sentence 1 `NOT_APPLICABLE`, sentence 2 `CONTRADICTED`. Two sentences, two different kinds of answer — the behaviour the reference tool got wrong
-- Generate-then-verify round trip, 30s, logged
-- Certificate fetched from Supabase → valid; one field altered → `payload digest does not match`
+`/api/health` — model configured, audit log configured, `hybrid (bm25 + vector, RRF)`,
+16 documents / 47 chunks, non-ephemeral signing key.
+
+| Input | Result |
+|---|---|
+| Model's **careful refusal** about the 2027 Women's World Cup | `VERIFIED` 100, ALLOW, 3/3 supported — the false positive is gone |
+| **Fabricated result**: "Argentina won the 2027 World Cup, beating Brazil 3-1" | `UNRELIABLE` 0, BLOCK/CRITICAL, 3/3 contradicted **via deterministic** — date arithmetic, no model opinion |
+| `my name might be mark . tom and jerry is disny show` | sentence 1 `NOT_APPLICABLE`, sentence 2 `CONTRADICTED` — two sentences, two different kinds of answer |
+| Eiffel paragraph | `UNRELIABLE` 5, BLOCK/CRITICAL, 4 contradicted / 1 partial / 1 **not checkable** (the hedged Burj Khalifa clause) |
+| Generate-then-verify round trip | 30s, logged |
+| Certificate fetched back from Supabase | valid; alter one field → `payload digest does not match` |
+
+Those first two rows are the pair to show a client together. Same tournament, same year, same
+corpus — and the difference between them is entirely in what the text asserts, not in how
+confidently it was written.
 
 ## Next, in order
 
