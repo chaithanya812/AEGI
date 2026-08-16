@@ -86,7 +86,17 @@ vercel --prod
 ```
 
 Vercel serves `web/dist` from its CDN and runs `api/index.py` as a Python function for
-`/api/*`. Set these in the project's environment — never commit them:
+`/api/*`.
+
+> **`"framework": null` in `vercel.json` is load-bearing — don't remove it.** Vercel
+> autodetects FastAPI from `requirements.txt`, and its preset builds a single lambda that owns
+> every route, silently overriding the `functions` and `rewrites` config. The failure is nasty
+> because nothing errors: `/api/health` returns **200 with `index.html`**, so the frontend sees
+> a successful response containing HTML and every call fails at the JSON parse. Opting out of
+> the preset keeps the intended split. (`vercel.json` is strict JSON — no comments allowed,
+> which is why this note lives here.)
+
+Set these in the project's environment — never commit them:
 
 | Variable | Needed for |
 |---|---|

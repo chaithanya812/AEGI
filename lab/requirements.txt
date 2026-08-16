@@ -1,5 +1,12 @@
-fastapi==0.115.6
-pydantic==2.10.4
-httpx==0.27.2
-cryptography==44.0.0
-uvicorn==0.34.0
+# Vercel's Python builder ignores .python-version and currently resolves CPython 3.14, so
+# every dependency here must have a wheel for it. Exact pins on pydantic 2.10 broke the
+# deploy: no cp314 wheel for pydantic-core, so uv fell back to compiling Rust against a PyO3
+# that caps at 3.13 and the build died in cargo. Ranges rather than pins, so the installer can
+# pick a wheel for whichever interpreter the platform lands on.
+fastapi>=0.118,<1.0
+pydantic>=2.12,<3.0
+httpx>=0.27,<0.29
+cryptography>=45,<48
+
+# Local development only; Vercel invokes the ASGI app directly.
+uvicorn>=0.34,<1.0
