@@ -1,0 +1,23 @@
+# Secrets — the Supabase secret key and the Ed25519 signing seed live in .env.local
+lab/.env
+lab/.env.local
+lab/.env.*.local
+
+# Python
+lab/.venv/
+__pycache__/
+*.py[cod]
+
+# Node
+lab/web/node_modules/
+lab/web/dist/
+lab/web/.vite/
+
+# Vercel
+lab/.vercel/
+.vercel/
+
+# scratch
+lab/smoke-out.txt
+Thumbs.db
+.DS_Store
