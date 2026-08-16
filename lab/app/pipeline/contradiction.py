@@ -57,6 +57,28 @@ class ContradictionReport:
         return [p.__dict__ for p in self.pairs]
 
 
+#: Cross-source contradiction needs a much higher bar than claim-vs-evidence comparison,
+#: because there is no claim to anchor it: any two numbers in a corpus can be subtracted, and
+#: most such subtractions are meaningless. So both figures must be *labelled with the same
+#: measure* by one of these words.
+#:
+#: Everything this excludes was a real false positive during development — a squad size
+#: against a clause number, a tower in Paris against a tower in Dubai, this year's bookings
+#: against last year's revenue. Each was reported as SEVERE with a confident percentage, which
+#: is worse than saying nothing: a client who spots one nonsense finding stops believing the
+#: real ones on the same screen.
+_MEASURE_NOUNS = frozenset(
+    """revenue revenues bookings turnover sales profit loss margin ebitda earnings
+    cap capped liability liabilities indemnity indemnities damages penalty fee fees
+    charges price cost costs salary compensation valuation funding
+    headcount employees staff population
+    height tall altitude depth length distance width
+    dose dosage concentration weight mass volume
+    retention period term duration years months days
+    growth share rate ratio percentage yield""".split()
+)
+
+
 def _comparable(a: Quantity, b: Quantity) -> bool:
     if a.dimension != b.dimension:
         return False
@@ -67,8 +89,21 @@ def _comparable(a: Quantity, b: Quantity) -> bool:
     # An inequality is not in conflict with a point value that satisfies it.
     if a.comparator != "=" or b.comparator != "=":
         return False
-    # Same dimension is not the same measure. Revenue and headcount are both counts.
-    return shares_measure(a, b)
+    if not shares_measure(a, b):
+        return False
+    # Strictest gate: the shared context must name a measure, not merely a company or a unit.
+    return bool(a.context & b.context & _MEASURE_NOUNS)
+
+
+def _same_matter(left: EvidenceItem, right: EvidenceItem) -> bool:
+    """Only compare documents from the same customer matter.
+
+    A genuine cross-source conflict is a conflict inside one body of work — an agreement
+    against its own amendment, audited accounts against the company's own press release.
+    Two unrelated reference articles disagreeing about two different towers is arithmetic,
+    not a finding.
+    """
+    return bool(left.matter) and left.matter == right.matter
 
 
 def _governing(left: EvidenceItem, right: EvidenceItem) -> tuple[str, str]:
@@ -114,6 +149,8 @@ def detect(evidence_groups: list[list[EvidenceItem]]) -> ContradictionReport:
             for right_item, right_qty in quantities[i + 1 :]:
                 if left_item.doc_id == right_item.doc_id:
                     continue  # a document restating its own figure is not a contradiction
+                if not _same_matter(left_item, right_item):
+                    continue
                 if not _comparable(left_qty, right_qty):
                     continue
 

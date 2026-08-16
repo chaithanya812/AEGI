@@ -31,6 +31,14 @@ CASES: list[tuple[str, str, str, str]] = [
         "CONTRADICTED by date arithmetic — deterministic, no model",
     ),
     (
+        "careful-refusal",
+        "general",
+        "The 2027 FIFA Women's World Cup has not taken place yet, as it is scheduled to be "
+        "held in Brazil. There is no winner or final score to report at this time.",
+        "MUST NOT be flagged — the model is being correctly careful, and punishing that is "
+        "worse than missing a hallucination",
+    ),
+    (
         "figure-mismatch",
         "financial",
         "Northwind Systems reported FY2025 revenue of GBP 4.2 billion, per the audited board pack.",

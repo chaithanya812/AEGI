@@ -98,7 +98,10 @@ _QTY_RE = re.compile(
     (?P<sym>[$£€₹¥])?\s*
     (?P<code>\b(?:USD|GBP|EUR|INR|JPY|CHF|CAD|AUD|SGD)\b)?\s*
     (?P<num>\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)
-    \s*(?P<scale>hundred|thousand|lakh|million|crore|billion|trillion|bn|tn|mn|[kKmMbB])?
+    # The single-letter scale forms need (?![A-Za-z]) or the alternation eats the "m" of
+    # "5mg" as a scale and leaves "g" as the unit — parsing a 5 milligram dose as five
+    # million grams, a factor of 10^9. Exactly the class of error this module exists to catch.
+    \s*(?P<scale>hundred|thousand|lakh|million|crore|billion|trillion|bn|tn|mn|[kKmMbB](?![A-Za-z]))?
     \s*(?P<unit>%|percent|per\s?cent|mm|cm|km|kilometres|kilometers|kilometre|kilometer|metres|meters|metre|meter|miles|mile|feet|foot|ft|mcg|µg|mg|kg|kilograms|kilogram|grams|gram|tonnes|tonne|g|m)?
     \b
     """,
@@ -153,16 +156,53 @@ _LOCATOR_WORDS = frozenset(
 _PRECEDING_WORD_RE = re.compile(r"([A-Za-z]+)[\s\.]*$")
 
 
-def _context_words(text: str, start: int, end: int) -> frozenset[str]:
-    """Two words before and three after, lowercased, stopwords dropped.
+#: Context must not cross a markdown table cell wall or a paragraph break.
+#:
+#: Table layout was manufacturing false matches: in a results table, `| GBP 2.1 billion |` sits
+#: next to `| Gross margin |`, so last year's revenue picked up "margin" as its subject and
+#: then "matched" this year's bookings. Physical adjacency in a table says nothing about
+#: whether two figures measure the same thing.
+#:
+#: A *single* newline is not a boundary. Markdown soft-wraps prose mid-sentence, so treating
+#: every newline as a wall cut "shall be capped at\nGBP 2,000,000" in half and lost the one
+#: cross-source conflict in the corpus actually worth reporting. Cells are walled by `|`,
+#: which already isolates table rows from each other since every row starts with one.
+_CELL_BOUNDARY = re.compile(r"\||\n[ \t]*\n")
 
-    "revenue of GBP 2.8 billion" -> {revenue, billion}; "48 teams" -> {teams}.
-    That is enough to tell a headcount from a height.
+
+def _segment_bounds(text: str, start: int, end: int) -> tuple[int, int]:
+    left = max(0, start - 60)
+    right = min(len(text), end + 60)
+    before = text[left:start]
+    after = text[end:right]
+
+    matches = list(_CELL_BOUNDARY.finditer(before))
+    if matches:
+        left = start - (len(before) - matches[-1].end())
+
+    match = _CELL_BOUNDARY.search(after)
+    if match:
+        right = end + match.start()
+
+    return left, right
+
+
+def _context_words(text: str, start: int, end: int) -> frozenset[str]:
+    """Four words either side, lowercased, stopwords dropped, confined to one line or cell.
+
+    "revenue of GBP 2.8 billion" -> {revenue}; "48 teams" -> {teams}. That is enough to tell a
+    headcount from a height.
+
+    Four rather than two, because the subject noun is often further away than it looks:
+    "Revenue for FY2025 was GBP 2.8 billion" puts "Revenue" three tokens back, and a
+    two-word window missed it — so a claim of GBP 4.2bn revenue failed to compare against
+    the audited figure at all, and the deterministic catch was silently lost.
     """
-    before = _WORD_RE.findall(text[max(0, start - 40) : start])[-2:]
-    after = _WORD_RE.findall(text[end : end + 40])[:3]
+    left, right = _segment_bounds(text, start, end)
+    before = _WORD_RE.findall(text[left:start])[-4:]
+    after = _WORD_RE.findall(text[end:right])[:4]
     words = {w.lower() for w in before + after}
-    return frozenset(w for w in words if w not in _CONTEXT_STOP and len(w) > 2)
+    return frozenset(w for w in words if w not in _CONTEXT_STOP and len(w) >= 2)
 
 
 def shares_measure(a: Quantity, b: Quantity) -> bool:
@@ -178,6 +218,26 @@ def shares_measure(a: Quantity, b: Quantity) -> bool:
     excluded from the comparison so they cannot manufacture a match.
     """
     return bool(a.context & b.context)
+
+
+def _is_clause_number(num_text: str, scale: str | None, unit: str | None, currency: str | None) -> bool:
+    """A bare `14.3` with no unit, scale or currency is a clause or section number.
+
+    Contract clauses open the line they number ("14.3 The Supplier's aggregate liability…"),
+    so there is no preceding "clause" keyword for the locator guard to catch. Left alone they
+    parse as decimals, and MP-10 then reports clause 14.3 as contradicting clause 14.1 by
+    1.4% — a finding that is confident, precise and meaningless.
+
+    Genuine decimals in this domain carry something with them: a scale ("2.8 billion"), a unit
+    ("0.005 g", "33 percent") or a currency. The cost of this rule is a bare ratio like
+    "the ratio was 1.5", which is rare and worth trading away.
+    """
+    if scale or unit or currency:
+        return False
+    if "." not in num_text or "," in num_text:
+        return False
+    whole, _, frac = num_text.partition(".")
+    return whole.isdigit() and len(whole) <= 2 and len(frac) <= 2
 
 
 def _is_bare_year(num_text: str, scale: str | None, unit: str | None) -> bool:
@@ -236,15 +296,25 @@ def extract_quantities(text: str, *, include_years: bool = False) -> list[Quanti
         except ValueError:
             continue
 
-        # A trailing m/b/k is a scale only when there is no explicit unit competing for it.
-        if scale_text:
-            value *= _SCALES.get(scale_text, 1.0)
-
         currency: str | None = None
         if symbol:
             currency = _CURRENCY_SYMBOLS.get(symbol)
         elif code in _CURRENCY_CODES:
             currency = code.upper()
+
+        # "5 m" is ambiguous: five million, or five metres? Resolve it by whether money is in
+        # play. "$4.2B" and "GBP 5m" are scales; a bare "5 m" is a unit. Guessing scale by
+        # default would silently multiply a distance by a million.
+        if len(scale_text) == 1 and currency is None:
+            if not unit_text and scale_text.lower() in _UNITS:
+                unit_text = scale_text.lower()
+            scale_text = ""
+
+        if _is_clause_number(num_text, scale_text or None, unit_text or None, currency):
+            continue
+
+        if scale_text:
+            value *= _SCALES.get(scale_text, 1.0)
 
         if currency:
             dimension = "currency"

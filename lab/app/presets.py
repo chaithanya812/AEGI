@@ -33,11 +33,21 @@ PRESETS: list[dict[str, Any]] = [
         "id": "future",
         "label": "Future event",
         "tone": "red",
-        "mode": "generate",
+        "mode": "verify_given",
         "domain": "general",
-        "prompt": "Who won the 2027 FIFA World Cup, and what was the final score?",
-        "expect": "CONTRADICTED on deterministic grounds. No model opinion involved.",
-        "carried_by": "2027 is after the reference clock and the claim is stated as concluded. Date arithmetic, MP-12.",
+        "text": (
+            "Argentina won the 2027 FIFA World Cup, beating Brazil 3-1 in the final in "
+            "Buenos Aires."
+        ),
+        "expect": (
+            "CONTRADICTED on deterministic grounds — 2027 is after the reference clock and "
+            "the claim asserts a completed result. No model opinion involved."
+        ),
+        "carried_by": (
+            "Date arithmetic, MP-12. This is supplied as pasted text rather than generated, "
+            "because a current model asked this question usually declines correctly — and the "
+            "validator has to work on text from any model, including the ones that don't."
+        ),
     },
     {
         "id": "citation",

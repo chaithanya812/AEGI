@@ -11,6 +11,13 @@ Written 2026-08-16 against the Project Sentinel brief v1.3 (artifact `d8976a1f`)
 stubs (§2). Stack is FastAPI + Vite/React/TS, one deploy (§3). Open: headline score vs ledger (§6), and
 whether the repo name `AEGI` is intended (§9).
 
+> **Status: built and deployed 2026-08-16.** All three milestones shipped. Live at
+> <https://reliability-lab.vercel.app>, code in [`lab/`](lab/), what actually happened —
+> including the seven bugs worth remembering — in [02-build-notes.md](02-build-notes.md).
+> Two things went beyond this plan: a Supabase audit log with replay-by-trace-id, and
+> Ed25519 verdict certificates that verify in the browser. The §6 recommendation was taken —
+> the ledger leads, the score is subordinate.
+
 ---
 
 ## 1. The one thing that decides whether this demo works

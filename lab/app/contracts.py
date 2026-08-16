@@ -110,6 +110,9 @@ class EvidenceItem(BaseModel):
     doc_id: str
     doc_title: str
     collection: str  # "reference" (public facts) | "matter" (the customer's own documents)
+    #: Which body of work this document belongs to. MP-10 uses it to confine cross-source
+    #: comparison to documents that plausibly speak about the same thing.
+    matter: str | None = None
     section: str
     page: int
     quote: str

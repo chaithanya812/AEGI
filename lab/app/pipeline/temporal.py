@@ -34,14 +34,47 @@ _CONCLUDED_RE = re.compile(
     r"\b("
     r"won|win[s]?\b|winner|awarded|received|completed|concluded|finished|ended|"
     r"launched|released|published|signed|elected|appointed|died|founded|built|"
+    r"beat|beats|defeated|defeats|clinched|lifted|triumphed|crowned|"
     r"was|were|has been|have been|had been|became|took place|occurred|happened"
     r")\b",
     re.IGNORECASE,
 )
+# Note: "held" and "hosted" are deliberately absent. Both appear in perfectly correct
+# forward-looking phrasing ("is scheduled to be held in Brazil"), and including them made a
+# true statement about a scheduled tournament read as an assertion that it had finished.
 
 _FUTURE_INTENT_RE = re.compile(
     r"\b(will|shall|is scheduled|are scheduled|is due|expected to|projected|forecast|"
     r"planned|upcoming|to be held)\b",
+    re.IGNORECASE,
+)
+
+#: Statements that a future event has *not* happened. These must never trip the
+#: future-event check, and getting this wrong is worse than missing a hallucination.
+#:
+#: The bug this exists to prevent, found in production: asked who won the 2027 World Cup, the
+#: model correctly answered "it has not taken place yet, there is no winner to report" — and
+#: the checker matched the word "winner" beside the year 2027 and declared the claim
+#: contradicted. A validator that punishes a model for being appropriately careful is worse
+#: than no validator, because it trains people to switch it off.
+_NON_OCCURRENCE_RE = re.compile(
+    r"("
+    r"\bno (?:winner|winners|outcome|result|results|score|champion|recipient|laureate)\b"
+    r"|\bthere (?:is|are|was|were) no\b"
+    r"|\b(?:has|have|had|is|are|was|were|does|do|did|can|could|cannot|will) ?n[o']?t\b"
+    r"|\bnot (?:yet|taken place|been held|been awarded|occurred|happened|concluded|completed"
+    r"|finished|played|decided|announced|exist|available)\b"
+    r"|\byet to (?:be|take place|happen|occur|conclude)\b"
+    r"|\bno such\b|\bdoes not exist\b|\bdo not exist\b|\bnever (?:took place|happened|held)\b"
+    r"|\bhas not\b|\bhaven't\b|\bhasn't\b|\bcan't\b|\bwon't\b|\bisn't\b|\baren't\b"
+    # Determiner negation with a trailing "yet": "No Nobel Prize has been awarded for 2028
+    # yet." The negation is carried by "No", not by a negated verb.
+    r"|^\s*no\s+\w"
+    r"|\bnone (?:has|have|was|were)\b"
+    # "yet" only counts as non-occurrence when a negator is nearby, so the adversative sense
+    # ("Argentina won, yet Brazil dominated") does not wrongly excuse a fabricated result.
+    r"|\b(?:not|no|none|never)\b[^.]{0,40}\byet\b"
+    r")",
     re.IGNORECASE,
 )
 
@@ -74,6 +107,17 @@ def check_future_event(claim_text: str, today: date) -> TemporalFinding | None:
     future_years = [y for y in years_in(claim_text) if y > today.year]
     if not future_years:
         return None
+
+    # Checked before anything else: a claim that the event has *not* happened is consistent
+    # with the date, not in conflict with it, however many outcome words it contains.
+    if _NON_OCCURRENCE_RE.search(claim_text):
+        return TemporalFinding(
+            outcome=CheckOutcome.PASS,
+            detail=(
+                f"references {future_years[0]}, which is in the future, and correctly states "
+                f"that the event has not happened rather than asserting an outcome"
+            ),
+        )
 
     if _FUTURE_INTENT_RE.search(claim_text) and not _CONCLUDED_RE.search(claim_text):
         return TemporalFinding(

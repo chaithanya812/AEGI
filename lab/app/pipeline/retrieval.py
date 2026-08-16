@@ -233,6 +233,7 @@ async def retrieve_for_claim(
                 doc_id=chunk.doc_id,
                 doc_title=chunk.doc_title,
                 collection=chunk.collection,
+                matter=chunk.matter,
                 section=chunk.section,
                 page=chunk.page,
                 quote=chunk.text.strip()[:900],

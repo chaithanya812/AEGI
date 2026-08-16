@@ -1,14 +1,14 @@
 ---
 doc_id: REF-FIFA-01
-title: FIFA World Cup — tournament and winners record
+title: FIFA World Cup — men's and women's tournament record
 collection: reference
 authority_tier: official
 effective_date: 2026-08-01
 ---
 
-## Completed tournaments {page=1}
+## Men's tournament — completed editions {page=1}
 
-The FIFA World Cup is held every four years. Winners of recent tournaments:
+The men's FIFA World Cup is held every four years. Recent winners:
 
 - 2006 — Italy
 - 2010 — Spain
@@ -16,21 +16,37 @@ The FIFA World Cup is held every four years. Winners of recent tournaments:
 - 2018 — France
 - 2022 — Argentina, defeating France on penalties in Qatar
 
-## Scheduled tournaments {page=1}
+Brazil holds the most men's titles with five. Germany and Italy have four each.
 
-The 2026 tournament is hosted jointly by Canada, Mexico and the United States and is the
-first to feature 48 teams.
+## Men's tournament — scheduled editions {page=1}
 
-There is no FIFA World Cup scheduled for 2027. The tournament runs on a four-year cycle,
-so the edition following 2026 is scheduled for 2030. As of the effective date of this
-record, no tournament after 2022 has been completed, and therefore **no winner exists for
-any tournament dated 2026 or later.**
+The 2026 men's tournament is hosted jointly by Canada, Mexico and the United States and is
+the first to feature 48 teams. The edition after 2026 is scheduled for 2030.
 
-Any statement naming a winner of a World Cup dated 2027 refers to a tournament that is not
-scheduled to exist. Any statement naming a winner of a tournament dated after the present
-day describes an event that has not occurred.
+**There is no men's FIFA World Cup in 2027.** The men's tournament runs on a four-year cycle,
+so no men's edition falls in that year. Any statement naming a winner of a *men's* World Cup
+dated 2027 refers to a tournament that does not exist.
 
-## Record holders {page=2}
+## Women's tournament {page=2}
 
-Brazil has won the most titles with five. Germany and Italy have four each. Argentina has
-three, the most recent in 2022.
+The FIFA Women's World Cup is a separate competition, also held every four years, on a cycle
+offset from the men's tournament. Recent winners:
+
+- 2015 — United States
+- 2019 — United States
+- 2023 — Spain, defeating England in the final, hosted by Australia and New Zealand
+
+**The 2027 FIFA Women's World Cup is scheduled to be hosted by Brazil.** It is the first
+Women's World Cup to be held in South America. As of the effective date of this record it has
+not been played, so no winner, final score or result exists for it. A statement that the 2027
+Women's World Cup is scheduled in Brazil is correct; a statement naming its winner is not.
+
+## Reading claims about future editions {page=2}
+
+No tournament dated after the present day has been completed, in either competition.
+Therefore:
+
+- Naming a winner, final score or champion for a future-dated edition describes an event that
+  has not occurred.
+- Stating that a future-dated edition is *scheduled*, or that it has *not yet taken place* and
+  has no winner, is accurate and should not be treated as an error.
